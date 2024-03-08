@@ -1,0 +1,26 @@
+---
+- name: Install pipeline pre-requisites
+  hosts: all
+  roles:
+    - role: ensure-pip
+    - role: ensure-docker
+  tasks:
+    - name: Install docker python library
+      ansible.builtin.pip:
+        name:
+        - "docker"
+    - name: Check if docker is installed
+      command: docker --version
+      register: docker_installed
+      ignore_errors: true
+    - name: Copy Targets on the node
+      ansible.builtin.copy:
+        src: "../files/targets.txt"
+        dest: "~/"
+        mode: 0500
+      no_log: false
+    - name: Check if output directory exists
+      ansible.builtin.file:
+        path: "~/scan_results"
+        state: directory
+        mode: '0755'

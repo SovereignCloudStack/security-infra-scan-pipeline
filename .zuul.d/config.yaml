@@ -1,0 +1,22 @@
+---
+- project:
+    name: SovereignCloudStack/security-infra-scan-pipeline
+    default-branch: main
+    merge-mode: "squash-merge"
+    periodic-daily:
+      jobs:
+        - scs-daily-security-scan
+    periodic-hourly:
+      jobs:
+        - noop
+    post:
+      jobs:
+        - noop
+    check:
+      jobs:
+        - noop
+- job:
+    name: scs-daily-security-scan
+    parent: base
+    pre-run: playbooks/pre.yaml
+    run: playbooks/daily-scan.yaml
