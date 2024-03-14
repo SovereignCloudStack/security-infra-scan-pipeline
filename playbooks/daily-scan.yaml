@@ -1,0 +1,122 @@
+---
+- name: Run pentesting tools
+  hosts: all
+  tasks:
+    - name: Run naabu scan
+      community.docker.docker_container:
+        name: naabu_scan
+        image: "projectdiscovery/naabu"
+        command: "-list /tmp/targets.txt -o /tmp/scan_results/naabu-results.txt"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: naabu_container_result
+
+    - name: Wait for naabu container to complete successfully
+      community.docker.docker_container_info:
+        name: naabu_scan
+      register: naabu_container_info
+      until: naabu_container_info.container.State.Running == false and naabu_container_info.container.State.ExitCode == 0
+      retries: 120
+      delay: 1
+      ignore_errors: true
+
+    - name: Display naabu results
+      command: cat ~/scan_results/naabu-results.txt
+      register: naabu_results
+
+    - name: Show naabu results
+      debug:
+        msg: "{{ naabu_results.stdout }}"
+
+    - name: Run httpx scan
+      community.docker.docker_container:
+        name: httpx_scan
+        image: "projectdiscovery/httpx"
+        command: "-l /tmp/scan_results/naabu-results.txt -o /tmp/scan_results/httpx-results.txt"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: httpx_container_result
+
+    - name: Wait for httpx container to complete successfully
+      community.docker.docker_container_info:
+        name: httpx_scan
+      register: httpx_container_info
+      until: httpx_container_info.container.State.Running == false and httpx_container_info.container.State.ExitCode == 0
+      retries: 120
+      delay: 1
+      ignore_errors: true
+
+    - name: Display httpx results
+      command: cat ~/scan_results/httpx-results.txt
+      register: httpx_results
+
+    - name: Show httpx results
+      debug:
+        msg: "{{ httpx_results.stdout }}"
+
+    - name: Run nuclei scan
+      community.docker.docker_container:
+        name: nuclei_scan
+        image: "projectdiscovery/nuclei"
+        command: "-list /tmp/scan_results/httpx-results.txt -j -o /tmp/scan_results/nuclei-results.json"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: nuclei_container_result
+
+      #As nuclei takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
+    - name: Wait for nuclei container to complete successfully
+      community.docker.docker_container_info:
+        name: nuclei_scan
+      register: nuclei_container_info
+      until: nuclei_container_info.container.State.Running == false and nuclei_container_info.container.State.ExitCode == 0
+      retries: 540
+      delay: 30
+      ignore_errors: true
+
+    - name: Display nuclei results
+      command: cat ~/scan_results/nuclei-results.json
+      register: nuclei_results
+
+    - name: Show nuclei results
+      debug:
+        msg: "{{ nuclei_results.stdout }}"
+
+    # - name: Run OWASP Zap scan
+    #   community.docker.docker_container:
+    #     name: zap_scan
+    #     image: "ghcr.io/zaproxy/zaproxy:weekly"
+    #     command: "zap-baseline.py -t $(cat /tmp/targets.txt) -J zap-results.json"
+    #     volumes:
+    #       - "~/:/tmp"
+    #       - "~/scan_results:/zap/wrk/:rw"
+    #     state: started
+    #     detach: true
+    #     auto_remove: true
+    #   register: zap_container_result
+
+    #   #As ZAP takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
+    # - name: Wait for zap container to complete successfully
+    #   community.docker.docker_container_info:
+    #     name: zap_scan
+    #   register: zap_container_info
+    #   until: zap_container_info.container.State.Running == false and zap_container_info.container.State.ExitCode == 0
+    #   retries: 540
+    #   delay: 30
+    #   ignore_errors: true
+
+    # - name: Display zap results
+    #   command: cat ~/scan_results/zap-results.json
+    #   register: zap_results
+
+    # - name: Show zap results
+    #   debug:
+    #     msg: "{{ zap_results.stdout }}"
