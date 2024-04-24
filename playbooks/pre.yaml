@@ -13,14 +13,19 @@
       command: docker --version
       register: docker_installed
       ignore_errors: true
-    - name: Copy Targets on the node
+    - name: Copy Files on the node
       ansible.builtin.copy:
-        src: "../files/targets.txt"
+        src: "../files/"
         dest: "~/"
         mode: 0500
       no_log: false
-    - name: Check if output directory exists
+    - name: Check if scans output directory exists
       ansible.builtin.file:
         path: "~/scan_results"
+        state: directory
+        mode: '0755'
+    - name: Check if zap scans output directory exists
+      ansible.builtin.file:
+        path: "~/scan_results/zap_reports"
         state: directory
         mode: '0755'
