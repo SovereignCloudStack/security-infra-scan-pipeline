@@ -130,6 +130,8 @@
         PATH: "{{ ansible_env.PATH }}:/usr/local/bin"  # Ensure docker and python are in the path
       vars:
         scan_type: ZAP Scan
+        targets_file: "/home/ubuntu/scan_results/httpx-results.txt"
+        reports_dir: "/home/ubuntu/scan_results/zap_reports"
       ignore_errors: true
 
 
