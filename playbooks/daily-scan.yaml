@@ -122,7 +122,7 @@
         # Upload each XML report to Defect Dojo
         for filename in $(ls {{ reports_dir }}/*.xml); do
             echo "Uploading $filename to Defect Dojo"
-            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.daily_scan_engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
         done
       args:
         executable: /bin/bash
