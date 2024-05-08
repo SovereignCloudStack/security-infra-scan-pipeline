@@ -26,7 +26,7 @@
     - name: Display naabu results
       command: cat ~/scan_results/naabu-results.txt
       register: naabu_results
-
+      
     - name: Show naabu results
       debug:
         msg: "{{ naabu_results.stdout }}"
@@ -52,13 +52,13 @@
       delay: 1
       ignore_errors: true
 
-    - name: Display httpx results
-      command: cat ~/scan_results/httpx-results.txt
-      register: httpx_results
-
-    - name: Show httpx results
-      debug:
-        msg: "{{ httpx_results.stdout }}"
+    #- name: Display httpx results
+    #  command: cat ~/scan_results/httpx-results.txt
+    #  register: httpx_results
+      
+    #- name: Show httpx results
+    #  debug:
+    #    msg: "{{ httpx_results.stdout }}"
 
     - name: Run nuclei scan
       community.docker.docker_container:
@@ -72,7 +72,7 @@
         auto_remove: true
       register: nuclei_container_result
 
-      #As nuclei takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
+    #As nuclei takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
     - name: Wait for nuclei container to complete successfully
       community.docker.docker_container_info:
         name: nuclei_scan
@@ -82,40 +82,62 @@
       delay: 30
       ignore_errors: true
 
-    - name: Display nuclei results
-      command: cat ~/scan_results/nuclei-results.json
-      register: nuclei_results
+    #- name: Display nuclei results
+    #  command: cat ~/scan_results/nuclei-results.json
+    #  register: nuclei_results
 
-    - name: Show nuclei results
-      debug:
-        msg: "{{ nuclei_results.stdout }}"
+    #- name: Show nuclei results
+    #  debug:
+    #    msg: "{{ nuclei_results.stdout }}"
 
-    # - name: Run OWASP Zap scan
-    #   community.docker.docker_container:
-    #     name: zap_scan
-    #     image: "ghcr.io/zaproxy/zaproxy:weekly"
-    #     command: "zap-baseline.py -t $(cat /tmp/targets.txt) -J zap-results.json"
-    #     volumes:
-    #       - "~/:/tmp"
-    #       - "~/scan_results:/zap/wrk/:rw"
-    #     state: started
-    #     detach: true
-    #     auto_remove: true
-    #   register: zap_container_result
+    - name: Send nuclei results to Defect Dojo
+      vars:
+        scan_type: Nuclei Scan
+      command: > 
+        curl -X POST "{{ pipeline_conf.dojo_url }}"
+        -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}"
+        -F "file=@scan_results/nuclei-results.json"
+        -F "engagement={{ pipeline_conf.engagement_id }}"
+        -F "scan_type={{ scan_type }}"
+        -F "verified=true"
+        -F "active=true"
+        -F "skip_duplicates=false"
+        -F "close_old_findings=true"
 
-    #   #As ZAP takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
-    # - name: Wait for zap container to complete successfully
-    #   community.docker.docker_container_info:
-    #     name: zap_scan
-    #   register: zap_container_info
-    #   until: zap_container_info.container.State.Running == false and zap_container_info.container.State.ExitCode == 0
-    #   retries: 540
-    #   delay: 30
-    #   ignore_errors: true
+    - name: Run OWASP Zap scan
+      ansible.builtin.shell: |        
+        # Function to run ZAP baseline scan
+        run_zap_scan() {
+            local target=$1
+            echo "Scanning target: $target"
+            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $target -r $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
+        }
 
-    # - name: Display zap results
-    #   command: cat ~/scan_results/zap-results.json
-    #   register: zap_results
+        # Read targets and run scans
+        while IFS= read -r target
+        do
+            run_zap_scan $target
+        done < "{{ targets_file }}"
+
+        # Upload each XML report to Defect Dojo
+        for filename in $(ls {{ reports_dir }}/*.xml); do
+            echo "Uploading $filename to Defect Dojo"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.daily_scan_engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/bin"  # Ensure docker and python are in the path
+      vars:
+        scan_type: ZAP Scan
+        targets_file: "/home/ubuntu/scan_results/httpx-results.txt"
+        reports_dir: "/home/ubuntu/scan_results/zap_reports"
+      ignore_errors: true
+
+
+    #- name: Display zap results
+    #  command: cat ~/scan_results/zap_combined_report.json
+    #  register: zap_results
 
     # - name: Show zap results
     #   debug:
