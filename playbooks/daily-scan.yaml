@@ -97,7 +97,7 @@
         curl -X POST "{{ pipeline_conf.dojo_url }}"
         -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}"
         -F "file=@scan_results/nuclei-results.json"
-        -F "engagement={{ pipeline_conf.engagement_id }}"
+        -F "engagement={{ pipeline_conf.daily_scan_engagement_id }}"
         -F "scan_type={{ scan_type }}"
         -F "verified=true"
         -F "active=true"
