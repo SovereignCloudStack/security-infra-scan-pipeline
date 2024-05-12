@@ -110,7 +110,7 @@
         run_zap_scan() {
             local target=$1
             echo "Scanning target: $target"
-            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $target -r $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
+            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $target -x $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
         }
 
         # Read targets and run scans
