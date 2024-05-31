@@ -18,6 +18,7 @@
 - job:
     name: scs-daily-security-scan
     parent: base
+    timeout: 7200 #2h
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
@@ -27,6 +28,7 @@
 - job:
     name: scs-weekly-security-scan
     parent: base
+    timeout: 21600 #6h
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
