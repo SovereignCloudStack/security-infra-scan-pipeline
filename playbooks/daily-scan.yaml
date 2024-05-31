@@ -23,13 +23,13 @@
       delay: 1
       ignore_errors: true
 
-    - name: Display naabu results
-      command: cat ~/scan_results/naabu-results.txt
-      register: naabu_results
+    #- name: Display naabu results
+    #  command: cat ~/scan_results/naabu-results.txt
+    #  register: naabu_results
       
-    - name: Show naabu results
-      debug:
-        msg: "{{ naabu_results.stdout }}"
+    #- name: Show naabu results
+    #  debug:
+    #    msg: "{{ naabu_results.stdout }}"
 
     - name: Run httpx scan
       community.docker.docker_container:
