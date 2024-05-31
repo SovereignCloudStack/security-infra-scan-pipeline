@@ -4,11 +4,24 @@
   roles:
     - role: ensure-pip
     - role: ensure-docker
+      vars:
+        docker_compose_install: true
   tasks:
     - name: Install docker python library
       ansible.builtin.pip:
         name:
         - "docker"
+    - name: Install python-gvm library (Greenbone)
+      ansible.builtin.pip:
+        name:
+        - "python-gvm"
+        state: present
+    - name: Install gvm-tools (Greenbone)
+      become: true
+      ansible.builtin.pip:
+        name: 
+        - "gvm-tools"
+        state: present
     - name: Check if docker is installed
       command: docker --version
       register: docker_installed
@@ -29,3 +42,14 @@
         path: "~/scan_results/zap_reports"
         state: directory
         mode: '0755'
+    - name: Check if Greenbone scans output directory exists
+      ansible.builtin.file:
+        path: "~/scan_results/gvm_reports"
+        state: directory
+        mode: '0755'
+    - name: Check if greenbone folder for socket bind mount exists
+      ansible.builtin.file:
+        path: "/tmp/gvm/gvmd"
+        state: directory
+        mode: '1777'
+        recurse: true
