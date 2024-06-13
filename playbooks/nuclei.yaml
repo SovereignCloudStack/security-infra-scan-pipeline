@@ -1,0 +1,40 @@
+---
+- name: Perform scan with Nuclei
+  hosts: all
+  tasks:
+
+    - name: Run nuclei scan
+      community.docker.docker_container:
+        name: nuclei_scan
+        image: "projectdiscovery/nuclei"
+        command: "-list /tmp/scan_results/httpx-results.txt -j -o /tmp/scan_results/nuclei-results.json"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: nuclei_container_result
+
+    # As nuclei takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
+    - name: Wait for nuclei container to complete successfully
+      community.docker.docker_container_info:
+        name: nuclei_scan
+      register: nuclei_container_info
+      until: nuclei_container_info.container.State.Running == false and nuclei_container_info.container.State.ExitCode == 0
+      retries: 540
+      delay: 30
+      ignore_errors: true
+
+    - name: Send nuclei results to Defect Dojo
+      vars:
+        scan_type: Nuclei Scan
+      command: >
+        curl -X POST "{{ pipeline_conf.dojo_url }}"
+        -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}"
+        -F "file=@scan_results/nuclei-results.json"
+        -F "engagement={{ pipeline_conf[engagement] }}"
+        -F "scan_type={{ scan_type }}"
+        -F "verified=true"
+        -F "active=true"
+        -F "skip_duplicates=false"
+        -F "close_old_findings=true"

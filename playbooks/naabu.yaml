@@ -1,0 +1,25 @@
+---
+- name: Perform scan with naabu
+  hosts: all
+  tasks:
+
+    - name: Run naabu scan
+      community.docker.docker_container:
+        name: naabu_scan
+        image: "projectdiscovery/naabu"
+        command: "-list /tmp/targets.txt -o /tmp/scan_results/naabu-results.txt"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: naabu_container_result
+
+    - name: Wait for naabu container to complete successfully
+      community.docker.docker_container_info:
+        name: naabu_scan
+      register: naabu_container_info
+      until: naabu_container_info.container.State.Running == false and naabu_container_info.container.State.ExitCode == 0
+      retries: 120
+      delay: 1
+      ignore_errors: true

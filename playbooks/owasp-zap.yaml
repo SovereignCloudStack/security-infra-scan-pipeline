@@ -1,0 +1,33 @@
+- name: Perform scan with OWASP ZAP
+  hosts: all
+  tasks:
+
+    - name: Run OWASP Zap scan
+      ansible.builtin.shell: |
+        # Function to run ZAP baseline scan
+        run_zap_scan() {
+            local target=$1
+            echo "Scanning target: $target"
+            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $target -x $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
+        }
+
+        # Read targets and run scans
+        while IFS= read -r target
+        do
+            run_zap_scan $target
+        done < "{{ targets_file }}"
+
+        # Upload each XML report to Defect Dojo
+        for filename in $(ls {{ reports_dir }}/*.xml); do
+            echo "Uploading $filename to Defect Dojo"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf[engagement] }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+        done
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/bin"  # Ensure docker and python are in the path
+      vars:
+        scan_type: ZAP Scan
+        targets_file: "/home/ubuntu/scan_results/httpx-results.txt"
+        reports_dir: "/home/ubuntu/scan_results/zap_reports"
+      ignore_errors: true
