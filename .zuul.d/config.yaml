@@ -6,6 +6,9 @@
     periodic-daily:
       jobs:
         - scs-daily-security-scan
+    periodic-weekly:
+      jobs:
+        - scs-weekly-security-scan
     post:
       jobs:
         - noop
@@ -15,8 +18,19 @@
 - job:
     name: scs-daily-security-scan
     parent: base
+    timeout: 7200 #2h
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
     pre-run: playbooks/pre.yaml
     run: playbooks/daily-scan.yaml
+
+- job:
+    name: scs-weekly-security-scan
+    parent: base
+    timeout: 21600 #6h
+    secrets:
+     - name: pipeline_conf
+       secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
+    pre-run: playbooks/pre.yaml
+    run: playbooks/weekly-scan.yaml

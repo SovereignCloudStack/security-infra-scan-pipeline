@@ -23,14 +23,6 @@
       delay: 1
       ignore_errors: true
 
-    #- name: Display naabu results
-    #  command: cat ~/scan_results/naabu-results.txt
-    #  register: naabu_results
-      
-    #- name: Show naabu results
-    #  debug:
-    #    msg: "{{ naabu_results.stdout }}"
-
     - name: Run httpx scan
       community.docker.docker_container:
         name: httpx_scan
@@ -51,14 +43,6 @@
       retries: 120
       delay: 1
       ignore_errors: true
-
-    #- name: Display httpx results
-    #  command: cat ~/scan_results/httpx-results.txt
-    #  register: httpx_results
-      
-    #- name: Show httpx results
-    #  debug:
-    #    msg: "{{ httpx_results.stdout }}"
 
     - name: Run nuclei scan
       community.docker.docker_container:
@@ -82,14 +66,6 @@
       delay: 30
       ignore_errors: true
 
-    #- name: Display nuclei results
-    #  command: cat ~/scan_results/nuclei-results.json
-    #  register: nuclei_results
-
-    #- name: Show nuclei results
-    #  debug:
-    #    msg: "{{ nuclei_results.stdout }}"
-
     - name: Send nuclei results to Defect Dojo
       vars:
         scan_type: Nuclei Scan
@@ -97,7 +73,7 @@
         curl -X POST "{{ pipeline_conf.dojo_url }}"
         -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}"
         -F "file=@scan_results/nuclei-results.json"
-        -F "engagement={{ pipeline_conf.daily_scan_engagement_id }}"
+        -F "engagement={{ pipeline_conf.weekly_scan_engagement_id }}"
         -F "scan_type={{ scan_type }}"
         -F "verified=true"
         -F "active=true"
@@ -110,7 +86,7 @@
         run_zap_scan() {
             local target=$1
             echo "Scanning target: $target"
-            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t $target -x $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
+            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t $target -x $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
         }
 
         # Read targets and run scans
@@ -122,7 +98,7 @@
         # Upload each XML report to Defect Dojo
         for filename in $(ls {{ reports_dir }}/*.xml); do
             echo "Uploading $filename to Defect Dojo"
-            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.daily_scan_engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.weekly_scan_engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
         done
       args:
         executable: /bin/bash
@@ -134,11 +110,42 @@
         reports_dir: "/home/ubuntu/scan_results/zap_reports"
       ignore_errors: true
 
+    - name: Start Greenbone containers
+      become: true
+      ansible.builtin.shell: |
+        docker-compose -f greenbone-compose.yaml -p greenbone-community-edition up -d
 
-    #- name: Display zap results
-    #  command: cat ~/scan_results/zap_combined_report.json
-    #  register: zap_results
+     #https://greenbone.github.io/docs/latest/22.4/container/workflows.html#exposing-gvmd-unix-socket-for-gmp-access
+    - name: Wait until gvmd socket is present before continuing (/tmp/gvm/gvmd/gvmd.sock)
+      wait_for:
+        path: /tmp/gvm/gvmd/gvmd.sock
+        state: present
 
-    # - name: Show zap results
-    #   debug:
-    #     msg: "{{ zap_results.stdout }}"
+    - name: Wait for GVM to start and feeds to update
+      ansible.builtin.shell: |
+        gvm-cli --gmp-username "admin" --gmp-password "admin" socket --socketpath /tmp/gvm/gvmd/gvmd.sock --xml "<get_feeds/>"
+      register: feed_status
+      until: "'<currently_syncing>' not in feed_status.stdout"
+      retries: 60
+      delay: 60
+      ignore_errors: yes
+
+    - name: Execute the GVM scan script
+      ansible.builtin.shell: |
+        python3 ~/gvm_scan.py
+      register: scan_result
+      ignore_errors: yes
+
+    - name: Upload results to DefecDojo
+      ansible.builtin.shell: |        
+        # Upload each XML report to Defect Dojo
+        for filename in $(ls {{ reports_dir }}/*.xml); do
+            echo "Uploading $filename to Defect Dojo"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf.weekly_scan_engagement_id }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+        done
+      args:
+        executable: /bin/bash
+      vars:
+        scan_type: OpenVAS Parser
+        reports_dir: "/home/ubuntu/scan_results/gvm_reports"
+      ignore_errors: true
