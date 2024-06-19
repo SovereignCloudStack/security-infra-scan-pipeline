@@ -2,32 +2,60 @@
   hosts: all
   tasks:
 
-    - name: Run OWASP Zap scan
-      ansible.builtin.shell: |
-        # Function to run ZAP baseline scan
-        run_zap_scan() {
-            local target=$1
-            echo "Scanning target: $target"
-            docker run --rm -v {{ reports_dir }}:/zap/wrk/:rw --user root -t ghcr.io/zaproxy/zaproxy:stable {{ zap_script }} -t $target -x $(echo $target | sed 's/[^a-zA-Z0-9]/_/g').xml
-        }
+    - name: Fetch httpx data
+      ansible.builtin.slurp:
+        src: "{{ scan_results_dir }}/httpx-results.txt"
+      register: httpx_results
 
-        # Read targets and run scans
-        while IFS= read -r target
-        do
-            run_zap_scan $target
-        done < "{{ targets_file }}"
+    - name: Run zap scan
+      community.docker.docker_container:
+        name: "zap"
+        image: "ghcr.io/zaproxy/zaproxy:stable"
+        command: "{{ zap_script }} -t {{ zj_item }} -x {{ zj_item | regex_replace('[^a-zA-Z0-9]', '_') }}.xml"
+        state: "started"
+        detach: false
+        volumes:
+          - "{{ scan_results_dir }}/zap_reports:/zap/wrk:rw"
+      register: zap
+      failed_when: "zap.status == 3"
+      loop: "{{ httpx_results['content'] | b64decode | split('\n') }}"
+      loop_control:
+        loop_var: zj_item
+      when:
+        - "zj_item != ''"
 
-        # Upload each XML report to Defect Dojo
-        for filename in $(ls {{ reports_dir }}/*.xml); do
-            echo "Uploading $filename to Defect Dojo"
-            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf[engagement] }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
-        done
-      args:
-        executable: /bin/bash
-      environment:
-        PATH: "{{ ansible_env.PATH }}:/usr/local/bin"  # Ensure docker and python are in the path
-      vars:
-        scan_type: ZAP Scan
-        targets_file: "/home/ubuntu/scan_results/httpx-results.txt"
-        reports_dir: "/home/ubuntu/scan_results/zap_reports"
-      ignore_errors: true
+    - name: Find Zap reports
+      ansible.builtin.find:
+        paths: "{{ scan_results_dir }}/zap_reports"
+        patterns: "*.xml"
+      register: "zap_reports"
+
+    - name: Read in ZAP reports content
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ zap_reports.files }}"
+      register: "zap_reports_content"
+
+    - name: Send Zap results to Defect Dojo
+      #  no_log: true
+      ansible.builtin.uri:
+        url: "{{ pipeline_conf.dojo_url }}"
+        headers:
+          Authorization: "{{ ('Token ' + pipeline_conf.dojo_api_key) if pipeline_conf.dojo_api_key is defined else pipeline_conf.dojo_auth }}"
+        method: "POST"
+        body_format: "form-multipart"
+        body:
+          engagement: "{{ pipeline_conf[engagement] }}"
+          scan_type: "ZAP Scan"
+          verified: "true"
+          active: "true"
+          skip_duplicates: "false"
+          close_old_findings: "true"
+          file: 
+            content: "{{ zj_item['content'] | b64decode }}"
+      loop: "{{ zap_reports_content.results }}"
+      loop_control:
+        loop_var: zj_item
+      when:
+        - "engagement is defined and engagement"
+        - "pipeline_conf is defined"
