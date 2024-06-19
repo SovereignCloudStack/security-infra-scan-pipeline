@@ -30,6 +30,7 @@
       # Since in Zuul it is not possible to define vars from secrets on the
       # job level pass a key name down to the job
       engagement: "daily_scan_engagement_id"
+      zap_script: "zap-baseline.py"
 
 - job:
     name: scs-weekly-security-scan
@@ -45,3 +46,4 @@
       # Since in Zuul it is not possible to define vars from secrets on the
       # job level pass a key name down to the job
       engagement: "weekly_scan_engagement_id"
+      zap_script: "zap-full-scan.py"
