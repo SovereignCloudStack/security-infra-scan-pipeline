@@ -1,0 +1,24 @@
+---
+- name: Perform Scan with httpx
+  hosts: all
+  tasks:
+    - name: Run httpx scan
+      community.docker.docker_container:
+        name: httpx_scan
+        image: "projectdiscovery/httpx"
+        command: "-l /tmp/scan_results/naabu-results.txt -o /tmp/scan_results/httpx-results.txt"
+        volumes:
+          - "~/:/tmp"
+        state: started
+        detach: true
+        auto_remove: true
+      register: httpx_container_result
+
+    - name: Wait for httpx container to complete successfully
+      community.docker.docker_container_info:
+        name: httpx_scan
+      register: httpx_container_info
+      until: httpx_container_info.container.State.Running == false and httpx_container_info.container.State.ExitCode == 0
+      retries: 120
+      delay: 1
+      ignore_errors: true

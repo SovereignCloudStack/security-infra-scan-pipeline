@@ -1,0 +1,44 @@
+---
+- name: Perform scan with Greenbone
+  hosts: all
+  tasks:
+
+    - name: Start Greenbone containers
+      become: true
+      ansible.builtin.shell: |
+        docker-compose -f greenbone-compose.yaml -p greenbone-community-edition up -d
+
+    # https://greenbone.github.io/docs/latest/22.4/container/workflows.html#exposing-gvmd-unix-socket-for-gmp-access
+    - name: Wait until gvmd socket is present before continuing (/tmp/gvm/gvmd/gvmd.sock)
+      wait_for:
+        path: /tmp/gvm/gvmd/gvmd.sock
+        state: present
+
+    - name: Wait for GVM to start and feeds to update
+      ansible.builtin.shell: |
+        gvm-cli --gmp-username "admin" --gmp-password "admin" socket --socketpath /tmp/gvm/gvmd/gvmd.sock --xml "<get_feeds/>"
+      register: feed_status
+      until: "'<currently_syncing>' not in feed_status.stdout"
+      retries: 60
+      delay: 60
+      ignore_errors: yes
+
+    - name: Execute the GVM scan script
+      ansible.builtin.shell: |
+        python3 ~/gvm_scan.py
+      register: scan_result
+      ignore_errors: yes
+
+    - name: Upload results to DefecDojo
+      ansible.builtin.shell: |
+        # Upload each XML report to Defect Dojo
+        for filename in $(ls {{ reports_dir }}/*.xml); do
+            echo "Uploading $filename to Defect Dojo"
+            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf[engagement] }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
+        done
+      args:
+        executable: /bin/bash
+      vars:
+        scan_type: OpenVAS Parser
+        reports_dir: "/home/ubuntu/scan_results/gvm_reports"
+      ignore_errors: true
