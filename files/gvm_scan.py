@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 from gvm.connections import UnixSocketConnection
@@ -42,12 +43,11 @@ def wait_for_task_completion(gmp, task_id, timeout=7200):  # Extended timeout fo
         print(f"Task {task_id} status: {status}. Checking again in 5 minutes.")
         time.sleep(300)  # Check every 5 minutes
 
-def get_report(gmp, report_id):
+def get_report(gmp, reports_dir: str, report_id):
     response = gmp.get_report(report_id=report_id, report_format_id=REPORT_FORMAT_ID)
     report_content = ET.fromstring(response).find('report')
     report_filename = f'report_{report_id}.xml'
-    output_folder = os.path.expanduser('~/scan_results/gvm_reports')
-    output_file = os.path.join(output_folder, report_filename)
+    output_file = os.path.join(reports_dir, report_filename)
     with open(output_file, 'wb') as file:
         file.write(ET.tostring(report_content, encoding='utf8', method='html'))
     print(f"Report saved as {report_filename}")
@@ -55,14 +55,15 @@ def get_report(gmp, report_id):
     return report_filename
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", action="append")
+    parser.add_argument("--reports-dir", type=str)
+    args = parser.parse_args()
     connection = UnixSocketConnection(path='/tmp/gvm/gvmd/gvmd.sock')
     with Gmp(connection) as gmp:
         gmp.authenticate('admin', 'admin')
 
-        with open('/home/ubuntu/targets.txt', 'r') as file:
-            targets = [line.strip() for line in file if line.strip()]
-
-        for target in targets:
+        for target in args.target:
             print(f"Creating target and task for {target}")
             target_id = create_target(gmp, f'Target for {target}', target, PORTS_ID)
             task_id = create_task(gmp, f'Scan for {target}', CONFIG_ID, target_id, SCANNER_ID)
@@ -71,7 +72,7 @@ def main():
             print(f"Task {task_id} corresponding report => {report_id}")
             final_status = wait_for_task_completion(gmp, task_id)
             if final_status == 'Done':
-                get_report(gmp, report_id)
+                get_report(gmp, args.reports_dir, report_id)
 
 if __name__ == '__main__':
     main()

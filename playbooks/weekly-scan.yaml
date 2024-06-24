@@ -1,5 +1,18 @@
 ---
 # individual scans are sharing data with each other using mounted volume, so the order matters
+
+# Greenbone takes quite some time to start. We can kick it and no other tasks in the meanwhile
+- name: Start Greenbone
+  hosts: all
+  tasks:
+
+     # TODO: replace with docker_compose_v2 once Zuul is
+# updated to 10.X so that community.docker collection is at least 3.6
+    - name: Start Greenbone containers
+      become: true
+      ansible.builtin.shell: |
+        docker-compose -f {{ scan_work_dir }}/greenbone-compose.yaml -p greenbone-community-edition up -d
+
 - name: Invoke Naabu scan
   ansible.builtin.import_playbook: naabu.yaml
 

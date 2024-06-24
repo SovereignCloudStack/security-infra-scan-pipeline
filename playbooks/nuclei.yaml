@@ -3,38 +3,50 @@
   hosts: all
   tasks:
 
+    # Invoke nuclei container waiting for the container to complete
     - name: Run nuclei scan
       community.docker.docker_container:
         name: nuclei_scan
         image: "projectdiscovery/nuclei"
         command: "-list /tmp/scan_results/httpx-results.txt -j -o /tmp/scan_results/nuclei-results.json"
         volumes:
-          - "~/:/tmp"
-        state: started
-        detach: true
+          - "{{ scan_work_dir }}:/tmp"
+        state: "started"
+        detach: false
         auto_remove: true
       register: nuclei_container_result
 
-    # As nuclei takes an indeterminate amount of time, check for container status each 30 seconds in a 90 minutes frame
-    - name: Wait for nuclei container to complete successfully
-      community.docker.docker_container_info:
-        name: nuclei_scan
-      register: nuclei_container_info
-      until: nuclei_container_info.container.State.Running == false and nuclei_container_info.container.State.ExitCode == 0
-      retries: 540
-      delay: 30
-      ignore_errors: true
+    - name: Find Nuclei report
+      ansible.builtin.find:
+        paths: "{{ scan_results_dir }}"
+        patterns: "nuclei-results.json"
+      register: "nuclei_reports"
 
-    - name: Send nuclei results to Defect Dojo
-      vars:
-        scan_type: Nuclei Scan
-      command: >
-        curl -X POST "{{ pipeline_conf.dojo_url }}"
-        -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}"
-        -F "file=@scan_results/nuclei-results.json"
-        -F "engagement={{ pipeline_conf[engagement] }}"
-        -F "scan_type={{ scan_type }}"
-        -F "verified=true"
-        -F "active=true"
-        -F "skip_duplicates=false"
-        -F "close_old_findings=true"
+    - name: Read in Nuclei report content
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ nuclei_reports.files }}"
+      register: "nuclei_reports_content"
+
+    - name: Send Nuclei results to Defect Dojo
+      no_log: true
+      ansible.builtin.uri:
+        url: "{{ pipeline_conf.dojo_url }}"
+        headers:
+          Authorization: "{{ ('Token ' + pipeline_conf.dojo_api_key) if pipeline_conf.dojo_api_key is defined else pipeline_conf.dojo_auth }}"
+        method: "POST"
+        body_format: "form-multipart"
+        body:
+          engagement: "{{ pipeline_conf[engagement] }}"
+          scan_type: "Nuclei Scan"
+          verified: "true"
+          active: "true"
+          skip_duplicates: "false"
+          close_old_findings: "true"
+          file: "{{ zj_item['content'] | b64decode }}"
+      loop: "{{ nuclei_reports_content.results }}"
+      loop_control:
+        loop_var: zj_item
+      when:
+        - "engagement is defined and engagement"
+        - "pipeline_conf is defined"

@@ -11,42 +11,41 @@
       ansible.builtin.pip:
         name:
         - "docker"
+
     - name: Install python-gvm library (Greenbone)
       ansible.builtin.pip:
         name:
         - "python-gvm"
         state: present
+
     - name: Install gvm-tools (Greenbone)
       become: true
       ansible.builtin.pip:
         name: 
         - "gvm-tools"
         state: present
+
     - name: Check if docker is installed
       command: docker --version
       register: docker_installed
       ignore_errors: true
+
     - name: Copy Files on the node
       ansible.builtin.copy:
         src: "../files/"
-        dest: "~/"
+        dest: "{{ scan_work_dir }}"
         mode: 0500
       no_log: false
-    - name: Check if scans output directory exists
+
+    - name: Ensure scan output directory exists
       ansible.builtin.file:
-        path: "~/scan_results"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
-    - name: Check if zap scans output directory exists
-      ansible.builtin.file:
-        path: "~/scan_results/zap_reports"
-        state: directory
-        mode: '0755'
-    - name: Check if Greenbone scans output directory exists
-      ansible.builtin.file:
-        path: "~/scan_results/gvm_reports"
-        state: directory
-        mode: '0755'
+      loop:
+        - "{{ scan_results_dir }}/zap_reports"
+        - "{{ scan_results_dir }}/gvm_reports"
+
     - name: Check if greenbone folder for socket bind mount exists
       ansible.builtin.file:
         path: "/tmp/gvm/gvmd"

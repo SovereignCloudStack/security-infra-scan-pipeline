@@ -3,47 +3,137 @@
     name: SovereignCloudStack/security-infra-scan-pipeline
     default-branch: main
     merge-mode: "squash-merge"
-    periodic-daily:
-      jobs:
-        - scs-daily-security-scan
-    periodic-weekly:
-      jobs:
-        - scs-weekly-security-scan
-    post:
-      jobs:
-        - noop
     check:
       jobs:
-        - noop
+        - scs-baseline-security-scan-test
+        - scs-full-security-scan-test
+        - scs-greenbone-security-scan-test
+    gate:
+      jobs:
+        - scs-baseline-security-scan-test
+        - scs-full-security-scan-test
+        - scs-greenbone-security-scan-test
+    periodic-daily:
+      jobs:
+        - scs-baseline-security-scan
+    periodic-weekly:
+      jobs:
+        - scs-full-security-scan
+        - scs-greenbone-security-scan
 
 - job:
-    name: scs-daily-security-scan
+    name: scs-security-scan-base
     parent: base
-    timeout: 7200 #2h
+    description: |
+      Base for any security scanning job
+    timeout: 3600 #1h
+    pre-run: playbooks/pre.yaml
+    post-run: playbooks/post.yaml
+    vars:
+      # Where to store intermediate data
+      scan_work_dir: "{{ ansible_user_dir }}/wrk"
+      # Where to flush (and read) results from
+      scan_results_dir: "{{ ansible_user_dir }}/wrk/scan_results"
+      # Default list of scan targets.
+      # NOTE(gtema): It would be nice in tests to use test instance itself, but
+      # it only exposes SSH port what makes scanning very fast and reports
+      # empty. We potentially want to see how the reports are looking like also 
+      # in tests.
+      scan_targets:
+        - 213.131.230.161
+
+- job:
+    name: scs-baseline-security-scan-base
+    parent: scs-security-scan-base
+    description: |
+      Base for the security scan involving naabu/nuclei/httpx/OWASP Zap.
+
+      OWASP Zap test is performed in the baseline configuration
+    run: playbooks/daily-scan.yaml
+    vars:
+      zap_script: "zap-baseline.py"
+
+- job:
+    name: scs-baseline-security-scan
+    parent: scs-baseline-security-scan-base
+    description: |
+      Perform baseline scan of the resources
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
-    pre-run: playbooks/pre.yaml
-    run: playbooks/daily-scan.yaml
     vars:
       # TODO: engagement_id is not a secret, define id here directly
       # Since in Zuul it is not possible to define vars from secrets on the
       # job level pass a key name down to the job
       engagement: "daily_scan_engagement_id"
-      zap_script: "zap-baseline.py"
 
 - job:
-    name: scs-weekly-security-scan
-    parent: base
-    timeout: 21600 #6h
+    name: scs-baseline-security-scan-test
+    parent: scs-baseline-security-scan-base
+    description: |
+      Test baseline-security-scan job on the test resources.
+
+      Since this is an untrusted job it does not have access to the secrets
+      and thus not posting results to the DefectDojo.
+    vars:
+      pipeline_conf:
+        dojo_url: https://demo.defectdojo.com/api/v2/import-scan/
+        daily_scan_engagement_id: 1
+        weekly_scan_engagement_id: 1
+        dojo_auth: "Basic YWRtaW46MURlZmVjdGRvam9AZGVtbyNhcHBzZWM="
+
+- job:
+    name: scs-full-security-scan-base
+    parent: scs-security-scan-base
+    description: |
+      Base for the security scan involving naabu/nuclei/httpx/OWASP Zap.
+
+      OWASP Zap test is performed in the full configuration
+    run: playbooks/daily-scan.yaml
+    vars:
+      zap_script: "zap-full-scan.py"
+
+- job:
+    name: scs-full-security-scan-test
+    parent: scs-full-security-scan-base
+    description: |
+      Test full-security-scan job on the test resources.
+
+      Since this is an untrusted job it does not have access to the secrets
+      and thus not posting results to the DefectDojo.
+
+- job:
+    name: scs-full-security-scan
+    parent: scs-full-security-scan-base
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
-    pre-run: playbooks/pre.yaml
-    run: playbooks/weekly-scan.yaml
     vars:
       # TODO: engagement_id is not a secret, define id here directly
       # Since in Zuul it is not possible to define vars from secrets on the
       # job level pass a key name down to the job
       engagement: "weekly_scan_engagement_id"
-      zap_script: "zap-full-scan.py"
+
+- job:
+    name: scs-greenbone-security-scan-base
+    parent: scs-security-scan-base
+    description: |
+      Perform baseline scan of the resources
+    timeout: 21600 #6h
+    run: playbooks/greenbone.yaml
+
+- job:
+    name: scs-greenbone-security-scan
+    parent: scs-greenbone-security-scan-base
+    secrets:
+     - name: pipeline_conf
+       secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
+    vars:
+      # TODO: engagement_id is not a secret, define id here directly
+      # Since in Zuul it is not possible to define vars from secrets on the
+      # job level pass a key name down to the job
+      engagement: "weekly_scan_engagement_id"
+
+- job:
+    name: scs-greenbone-security-scan-test
+    parent: scs-greenbone-security-scan-base
