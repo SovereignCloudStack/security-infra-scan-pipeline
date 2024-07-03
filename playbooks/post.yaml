@@ -1,0 +1,14 @@
+---
+- name: Fetch scan reports to be part of Zuul job logs
+  hosts: all
+  vars:
+    log_path: "{{ zuul.executor.log_root }}"
+  tasks:
+    - name: Fetch scan reports as Zuul logs
+      ansible.builtin.synchronize:
+        dest: "{{ log_path }}"
+        mode: pull
+        src: "{{ scan_results_dir }}"
+        verify_host: true
+        owner: no
+        group: no

@@ -6,11 +6,11 @@
     - name: Start Greenbone containers
       become: true
       ansible.builtin.shell: |
-        docker-compose -f greenbone-compose.yaml -p greenbone-community-edition up -d
+        docker-compose -f {{ scan_work_dir }}/greenbone-compose.yaml -p greenbone-community-edition up -d
 
     # https://greenbone.github.io/docs/latest/22.4/container/workflows.html#exposing-gvmd-unix-socket-for-gmp-access
     - name: Wait until gvmd socket is present before continuing (/tmp/gvm/gvmd/gvmd.sock)
-      wait_for:
+      ansible.builtin.wait_for:
         path: /tmp/gvm/gvmd/gvmd.sock
         state: present
 
@@ -21,24 +21,44 @@
       until: "'<currently_syncing>' not in feed_status.stdout"
       retries: 60
       delay: 60
-      ignore_errors: yes
+      changed_when: false
 
     - name: Execute the GVM scan script
       ansible.builtin.shell: |
-        python3 ~/gvm_scan.py
+        python3 {{ scan_work_dir }}/gvm_scan.py --reports-dir {{ scan_results_dir }}/gvm_reports {{ ['--target'] | product(scan_targets) | map('join', ' ') | join(' ') }}
       register: scan_result
-      ignore_errors: yes
 
-    - name: Upload results to DefecDojo
-      ansible.builtin.shell: |
-        # Upload each XML report to Defect Dojo
-        for filename in $(ls {{ reports_dir }}/*.xml); do
-            echo "Uploading $filename to Defect Dojo"
-            curl -X POST "{{ pipeline_conf.dojo_url }}" -H "Authorization: Token {{ pipeline_conf.dojo_api_key }}" -F "file=@${filename}" -F "engagement={{ pipeline_conf[engagement] }}" -F "scan_type={{ scan_type }}" -F "verified=true" -F "skip_duplicates=false" -F "close_old_findings=true"
-        done
-      args:
-        executable: /bin/bash
-      vars:
-        scan_type: OpenVAS Parser
-        reports_dir: "/home/ubuntu/scan_results/gvm_reports"
-      ignore_errors: true
+    - name: Find Greenbone reports
+      ansible.builtin.find:
+        paths: "{{ scan_results_dir }}/gvm_reports"
+        patterns: "*.xml"
+      register: "gvm_reports"
+
+    - name: Read in Greenbone reports content
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ gvm_reports.files }}"
+      register: "gvm_reports_content"
+
+    - name: Send Greenbone results to Defect Dojo
+      no_log: true
+      ansible.builtin.uri:
+        url: "{{ pipeline_conf.dojo_url }}"
+        headers:
+          Authorization: "{{ ('Token ' + pipeline_conf.dojo_api_key) if pipeline_conf.dojo_api_key is defined else pipeline_conf.dojo_auth }}"
+        method: "POST"
+        body_format: "form-multipart"
+        body:
+          engagement: "{{ pipeline_conf[engagement] }}"
+          scan_type: "OpenVAS Parser"
+          verified: "true"
+          active: "true"
+          skip_duplicates: "false"
+          close_old_findings: "true"
+          file: "{{ zj_item['content'] | b64decode }}"
+      loop: "{{ gvm_reports_content.results }}"
+      loop_control:
+        loop_var: zj_item
+      when:
+        - "engagement is defined and engagement"
+        - "pipeline_conf is defined"
