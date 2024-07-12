@@ -1,4 +1,6 @@
 ---
+  #Port Scanning over the specified targets
+  #Output: list of addresses in the form of IP:Port
 - name: Perform scan with naabu
   hosts: all
   tasks:

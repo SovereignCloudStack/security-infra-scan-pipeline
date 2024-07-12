@@ -2,22 +2,26 @@
 - name: Install pipeline pre-requisites
   hosts: all
   roles:
+    #Install pre-defined python-pip and docker roles on the zuul worker node
     - role: ensure-pip
     - role: ensure-docker
       vars:
         docker_compose_install: true
   tasks:
+      #docker python library is needed by the pipeline to run docker related tasks
     - name: Install docker python library
       ansible.builtin.pip:
         name:
         - "docker"
-
+      
+      #python-gvm library is needed for gvm_scan.py script in order to interact with the gvmd socket
     - name: Install python-gvm library (Greenbone)
       ansible.builtin.pip:
         name:
         - "python-gvm"
         state: present
 
+      #gvm-tools are using during Greenbone deployment to perform different tasks
     - name: Install gvm-tools (Greenbone)
       become: true
       ansible.builtin.pip:
