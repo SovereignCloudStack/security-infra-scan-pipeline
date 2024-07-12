@@ -1,12 +1,19 @@
+---
+#Web service scan based in OWASP ZAP 'Release' status rulesets
 - name: Perform scan with OWASP ZAP
   hosts: all
   tasks:
-
+    #Targets are fetched from httx scan results, this is, full url addresses.
     - name: Fetch httpx data
       ansible.builtin.slurp:
         src: "{{ scan_results_dir }}/httpx-results.txt"
       register: httpx_results
 
+    #Invoke ZAP container, waiting for the container to complete (reports being generated)
+    #Based on the pipeline being triggered different scans are performed
+    #For Daily pipeline trigger => zap-baseline.py - runs ZAP spider + ajax spider + passive scan
+    #For Weekly pipeline trigger => zap-full-scan.py - runs ZAP spider + ajax spider + full active scan
+    #Output: This scanner produces one xml report for each target being analyzed
     - name: Run zap scan
       community.docker.docker_container:
         name: "zap"
@@ -24,18 +31,23 @@
       when:
         - "zj_item != ''"
 
+    #Small task to list generated zap xml reports.
     - name: Find Zap reports
       ansible.builtin.find:
         paths: "{{ scan_results_dir }}/zap_reports"
         patterns: "*.xml"
       register: "zap_reports"
 
+    #Small task to read previous listed xml reports content.
+    #Content is stored as base64 in a variable
     - name: Read in ZAP reports content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ zap_reports.files }}"
       register: "zap_reports_content"
 
+    #Iterate over stored reports content, decode them from base64 and send it to a defectdojo instance. 
+    #Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Zap results to Defect Dojo
       #  no_log: true
       ansible.builtin.uri:

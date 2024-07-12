@@ -6,6 +6,7 @@ from gvm.protocols.gmp import Gmp
 import xml.etree.ElementTree as ET
 
 #Constants
+#This settings are persisted across all Greenbone versions and their values never change
 CONFIG_ID = 'daba56c8-73ec-11df-a475-002264764cea'  # Full and Fast Scan Config
 SCANNER_ID = '08b69003-5fc2-4037-a479-93b440211c73' # Default openvas scanner id
 PORTS_ID = '730ef368-57e2-11e1-a90f-406186ea4fc5' # All TCP and Nmap top 100 UDP

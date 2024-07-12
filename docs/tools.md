@@ -1,6 +1,6 @@
 # Tools Description
 
-The following tools make up the automated pentesting pipeline. Each tool has it's own use case and they build up onto each other.
+The following tools make up the automated pentesting pipeline.
 
 
 ## Naabu

@@ -1,4 +1,5 @@
 ---
+#Web service template based scan
 - name: Perform scan with Nuclei
   hosts: all
   tasks:
@@ -15,19 +16,24 @@
         detach: false
         auto_remove: true
       register: nuclei_container_result
-
+    
+    #Small task to list generated nuclei json report.
     - name: Find Nuclei report
       ansible.builtin.find:
         paths: "{{ scan_results_dir }}"
         patterns: "nuclei-results.json"
       register: "nuclei_reports"
 
+    #Small task to read previous listed json report content.
+    #Content is stored as base64 in a variable
     - name: Read in Nuclei report content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ nuclei_reports.files }}"
       register: "nuclei_reports_content"
 
+    #Iterate over stored report content, decode it from base64 and send it to a defectdojo instance. 
+    #Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Nuclei results to Defect Dojo
       no_log: true
       ansible.builtin.uri:

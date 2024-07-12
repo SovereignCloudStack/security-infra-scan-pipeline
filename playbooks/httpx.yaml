@@ -1,4 +1,6 @@
 ---
+  #Identify web services running across thee results forwarded by naabu
+  #Output: urls in the form of http[s]://IP:Port
 - name: Perform Scan with httpx
   hosts: all
   tasks:

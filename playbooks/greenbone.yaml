@@ -3,17 +3,22 @@
   hosts: all
   tasks:
 
+    #adapted from official greenbone docker-compose file. It has some modifications in order to expose gvmd daemon to the underlaying host
+    #https://greenbone.github.io/docs/latest/22.4/container/workflows.html#exposing-gvmd-unix-socket-for-gmp-access
     - name: Start Greenbone containers
       become: true
       ansible.builtin.shell: |
         docker-compose -f {{ scan_work_dir }}/greenbone-compose.yaml -p greenbone-community-edition up -d
 
-    # https://greenbone.github.io/docs/latest/22.4/container/workflows.html#exposing-gvmd-unix-socket-for-gmp-access
+    #gvmd socket takes some time to become available
     - name: Wait until gvmd socket is present before continuing (/tmp/gvm/gvmd/gvmd.sock)
       ansible.builtin.wait_for:
         path: /tmp/gvm/gvmd/gvmd.sock
         state: present
 
+    #Updated feeds are provided within dedicated containers once they are pulled (they are built in a daily basis - 24 hours period.
+    #Feed data is copied into the docker volumes, defined in the docker-compose file, and it is then loaded by the running daemons. 
+    #This process takes a huge amount of time and can be queried interacting with the gvmd socket through the gvm-cli.
     - name: Wait for GVM to start and feeds to update
       ansible.builtin.shell: |
         gvm-cli --gmp-username "admin" --gmp-password "admin" socket --socketpath /tmp/gvm/gvmd/gvmd.sock --xml "<get_feeds/>"
@@ -23,23 +28,30 @@
       delay: 60
       changed_when: false
 
+    #This task executes a python script that configures everything in greenbone to scan the targets, based on the predefined "Full and Fast Scan"
+    #Returns a xml report.
     - name: Execute the GVM scan script
       ansible.builtin.shell: |
         python3 {{ scan_work_dir }}/gvm_scan.py --reports-dir {{ scan_results_dir }}/gvm_reports {{ ['--target'] | product(scan_targets) | map('join', ' ') | join(' ') }}
       register: scan_result
 
+    #Small task to list all generated xml reports.
     - name: Find Greenbone reports
       ansible.builtin.find:
         paths: "{{ scan_results_dir }}/gvm_reports"
         patterns: "*.xml"
       register: "gvm_reports"
 
+    #Small task to read previous listed xml reports content.
+    #Content is stored as base64 in a variable
     - name: Read in Greenbone reports content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ gvm_reports.files }}"
       register: "gvm_reports_content"
 
+    #Iterate over stored reports content, decode them from base64 and send it to a defectdojo instance. 
+    #Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Greenbone results to Defect Dojo
       no_log: true
       ansible.builtin.uri:
