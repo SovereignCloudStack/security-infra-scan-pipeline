@@ -6,8 +6,8 @@
   hosts: all
   tasks:
 
-     # TODO: replace with docker_compose_v2 once Zuul is
-# updated to 10.X so that community.docker collection is at least 3.6
+    # TODO: replace with docker_compose_v2 once Zuul is
+    # updated to 10.X so that community.docker collection is at least 3.6
     - name: Start Greenbone containers
       become: true
       ansible.builtin.shell: |

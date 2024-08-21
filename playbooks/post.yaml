@@ -1,4 +1,5 @@
 ---
+# Store reports as zuul artifacts
 - name: Fetch scan reports to be part of Zuul job logs
   hosts: all
   vars:
