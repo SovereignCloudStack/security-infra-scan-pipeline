@@ -26,7 +26,8 @@
     parent: base
     description: |
       Base for any security scanning job
-    timeout: 3600 #1h
+    # NOTE(90n20): Default timeout of all jobs has been increased to 3hs due to the amount of targets being defined.
+    timeout: 10800 #3hs
     pre-run: playbooks/pre.yaml
     post-run: playbooks/post.yaml
     vars:
@@ -58,7 +59,6 @@
         - api.gx-scs.sovereignit.cloud
         - compliance.sovereignit.cloud
         - health.gx-scs.sovereignit.cloud
-        - health.prod1.plusserver.sovereignit.cloud
         - iam.gx-scs.sovereignit.cloud
         - ui.gx-scs.sovereignit.cloud
 
@@ -87,7 +87,6 @@
       # job level pass a key name down to the job
       engagement: "daily_scan_engagement_id"
 
-
 - job:
     name: scs-baseline-security-scan-test
     parent: scs-baseline-security-scan-base
@@ -110,6 +109,10 @@
       Base for the security scan involving naabu/nuclei/httpx/OWASP Zap.
 
       OWASP Zap test is performed in the full configuration
+    # NOTE(90n20): zap-full-scan.py includes both ZAP spider and ajax spider 
+    # and then performs a full active scan, this is, launch attacks on the 
+    # targets. This runs for a long period of time, so the timeout has to be adjusted. 
+    timeout: 21600 #6h
     run: playbooks/daily-scan.yaml
     vars:
       zap_script: "zap-full-scan.py"
