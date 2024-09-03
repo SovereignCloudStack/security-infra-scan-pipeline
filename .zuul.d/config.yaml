@@ -143,6 +143,7 @@
     parent: scs-security-scan-base
     description: |
       Perform baseline scan of the resources
+    nodeset: ubuntu-jammy-large
     timeout: 21600 #6h
     run: playbooks/greenbone.yaml
 
