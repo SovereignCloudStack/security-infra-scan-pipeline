@@ -31,7 +31,8 @@ def get_task_status(gmp, task_id):
     task_xml = ET.fromstring(response)
     return task_xml.find('.//status').text
 
-def wait_for_task_completion(gmp, task_id, timeout=7200):  # Extended timeout for long scans
+def wait_for_task_completion(gmp, task_id, timeout=14400):  # Extended timeout for long scans
+    # NOTE(90n20): greenbone tasks timeout has been doubled as tests showed that some domains took more than 2 hours to be completed
     print(f"Task {task_id}: Waiting for completion.")
     start_time = time.time()
     while True:
