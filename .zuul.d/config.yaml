@@ -141,7 +141,6 @@
 - job:
     name: scs-greenbone-security-scan-base
     parent: scs-security-scan-base
-    nodeset: ubuntu-jammy-large
     description: |
       Perform baseline scan of the resources
     nodeset: ubuntu-jammy-large
