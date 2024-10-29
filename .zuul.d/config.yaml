@@ -58,7 +58,7 @@
         - zuul.scs.community
         - api.gx-scs.sovereignit.cloud
         - compliance.sovereignit.cloud
-        - health.gx-scs.sovereignit.cloud
+        #- health.gx-scs.sovereignit.cloud
         #- iam.gx-scs.sovereignit.cloud
         - ui.gx-scs.sovereignit.cloud
 
