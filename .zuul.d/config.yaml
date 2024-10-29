@@ -41,25 +41,25 @@
       # empty. We potentially want to see how the reports are looking like also 
       # in tests.
       scan_targets:
-        - capi-jsgen.moin.k8s.scs.community
-        - cluster-gen.moin.k8s.scs.community
-        - dex.scs.community
-        - maschinenraum.scs.community
-        - moin.k8s.scs.community
+        #- capi-jsgen.moin.k8s.scs.community
+        #- cluster-gen.moin.k8s.scs.community
+        #- dex.scs.community
+        #- maschinenraum.scs.community
+        #- moin.k8s.scs.community
         - monitoring.scs.community
-        - registry.scs.community
-        - status-api.k8s.scs.community
-        - status-idp.k8s.scs.community
-        - status.k8s.scs.community
-        - viz.moin.k8s.scs.community
-        - zuul-dev.scs.community
-        - zuul-logs-dev.scs.community
-        - zuul-logs.scs.community
+        #- registry.scs.community
+        #- status-api.k8s.scs.community
+        #- status-idp.k8s.scs.community
+        #- status.k8s.scs.community
+        #- viz.moin.k8s.scs.community
+        #- zuul-dev.scs.community
+        #- zuul-logs-dev.scs.community
+        #- zuul-logs.scs.community
         - zuul.scs.community
         - api.gx-scs.sovereignit.cloud
         - compliance.sovereignit.cloud
         - health.gx-scs.sovereignit.cloud
-        - iam.gx-scs.sovereignit.cloud
+        #- iam.gx-scs.sovereignit.cloud
         - ui.gx-scs.sovereignit.cloud
 
 - job:
