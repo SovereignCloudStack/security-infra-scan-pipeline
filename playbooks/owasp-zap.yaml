@@ -46,6 +46,12 @@
       loop: "{{ zap_reports.files }}"
       register: "zap_reports_content"
 
+    - name: Debug pipeline_conf and engagement
+      debug:
+        msg: 
+          - "pipeline_conf: {{ pipeline_conf }}"
+          - "engagement: {{ engagement }}"
+
     #Iterate over stored reports content, decode them from base64 and send it to a defectdojo instance. 
     #Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Zap results to Defect Dojo
