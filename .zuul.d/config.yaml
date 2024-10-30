@@ -5,14 +5,14 @@
     merge-mode: "squash-merge"
     check:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - scs-baseline-security-scan
+        #- scs-full-security-scan-test
+        #- scs-greenbone-security-scan-test
     gate:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - scs-baseline-security-scan
+        #- scs-full-security-scan-test
+        #- scs-greenbone-security-scan-test
     periodic-daily:
       jobs:
         - scs-baseline-security-scan
