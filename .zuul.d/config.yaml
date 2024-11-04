@@ -30,6 +30,7 @@
     timeout: 10800 #3hs
     pre-run: playbooks/pre.yaml
     post-run: playbooks/post.yaml
+    nodeset: ubuntu-jammy-large
     vars:
       # Where to store intermediate data
       scan_work_dir: "{{ ansible_user_dir }}/wrk"
