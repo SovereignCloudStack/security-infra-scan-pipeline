@@ -14,5 +14,4 @@
           - "{{ scan_work_dir }}:/tmp"
         state: "started"
         detach: false
-        auto_remove: true
       register: httpx_container_result

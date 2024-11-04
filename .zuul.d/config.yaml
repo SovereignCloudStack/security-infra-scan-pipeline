@@ -3,6 +3,26 @@
     name: SovereignCloudStack/security-infra-scan-pipeline
     default-branch: main
     merge-mode: "squash-merge"
+    vars:
+      scan_targets:
+        #- capi-jsgen.moin.k8s.scs.community
+        #- cluster-gen.moin.k8s.scs.community
+        #- dex.scs.community
+        #- maschinenraum.scs.community
+        #- moin.k8s.scs.community
+        - monitoring.scs.community
+        #- registry.scs.community
+        #- status-api.k8s.scs.community
+        #- status-idp.k8s.scs.community
+        #- status.k8s.scs.community
+        #- viz.moin.k8s.scs.community
+        - zuul.sovereignit.cloud
+        - api.gx-scs.sovereignit.cloud
+        - compliance.sovereignit.cloud
+        #- health.gx-scs.sovereignit.cloud
+        #- iam.gx-scs.sovereignit.cloud
+        - ui.gx-scs.sovereignit.cloud
+
     check:
       jobs:
         - scs-baseline-security-scan-test
@@ -36,32 +56,6 @@
       scan_work_dir: "{{ ansible_user_dir }}/wrk"
       # Where to flush (and read) results from
       scan_results_dir: "{{ ansible_user_dir }}/wrk/scan_results"
-      # Default list of scan targets.
-      # NOTE(gtema): It would be nice in tests to use test instance itself, but
-      # it only exposes SSH port what makes scanning very fast and reports
-      # empty. We potentially want to see how the reports are looking like also 
-      # in tests.
-      scan_targets:
-        #- capi-jsgen.moin.k8s.scs.community
-        #- cluster-gen.moin.k8s.scs.community
-        #- dex.scs.community
-        #- maschinenraum.scs.community
-        #- moin.k8s.scs.community
-        - monitoring.scs.community
-        #- registry.scs.community
-        #- status-api.k8s.scs.community
-        #- status-idp.k8s.scs.community
-        #- status.k8s.scs.community
-        #- viz.moin.k8s.scs.community
-        #- zuul-dev.scs.community
-        #- zuul-logs-dev.scs.community
-        #- zuul-logs.scs.community
-        - zuul.scs.community
-        - api.gx-scs.sovereignit.cloud
-        - compliance.sovereignit.cloud
-        #- health.gx-scs.sovereignit.cloud
-        #- iam.gx-scs.sovereignit.cloud
-        - ui.gx-scs.sovereignit.cloud
 
 - job:
     name: scs-baseline-security-scan-base
@@ -97,6 +91,10 @@
       Since this is an untrusted job it does not have access to the secrets
       and thus not posting results to the DefectDojo.
     vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud
+
       pipeline_conf:
         dojo_url: https://demo.defectdojo.com/api/v2/import-scan/
         daily_scan_engagement_id: 1
@@ -126,6 +124,10 @@
 
       Since this is an untrusted job it does not have access to the secrets
       and thus not posting results to the DefectDojo.
+    vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud
 
 - job:
     name: scs-full-security-scan
@@ -163,3 +165,7 @@
 - job:
     name: scs-greenbone-security-scan-test
     parent: scs-greenbone-security-scan-base
+    vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud

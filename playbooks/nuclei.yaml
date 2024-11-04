@@ -14,7 +14,6 @@
           - "{{ scan_work_dir }}:/tmp"
         state: "started"
         detach: false
-        auto_remove: true
       register: nuclei_container_result
     
     #Small task to list generated nuclei json report.
