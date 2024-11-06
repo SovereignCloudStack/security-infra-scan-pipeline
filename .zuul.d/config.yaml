@@ -25,14 +25,19 @@
 
     check:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - scs-baseline-security-scan-test: &trig
+            files:
+              - ^files/.*
+              - ^playbooks/.*
+              - ^.zuul.d/.*
+        - scs-full-security-scan-test: *trig
+        - scs-greenbone-security-scan-test: *trig
     gate:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - noop
+        - scs-baseline-security-scan-test: *trig
+        - scs-full-security-scan-test: *trig
+        - scs-greenbone-security-scan-test: *trig
     periodic-daily:
       jobs:
         - scs-baseline-security-scan
