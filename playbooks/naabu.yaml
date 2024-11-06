@@ -13,7 +13,6 @@
         command: "-host {{ scan_targets | default([ansible_ssh_host]) | list | join(',') }} -o /tmp/scan_results/naabu-results.txt"
         state: "started"
         detach: false
-        auto_remove: true
         volumes:
           - "{{ scan_work_dir }}:/tmp"
       register: naabu_container_result
