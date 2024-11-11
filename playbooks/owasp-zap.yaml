@@ -21,6 +21,7 @@
         command: "{{ zap_script }} -t {{ zj_item }} -x {{ zj_item | regex_replace('[^a-zA-Z0-9]', '_') }}.xml"
         state: "started"
         detach: false
+        timeout: 120
         volumes:
           - "{{ scan_results_dir }}/zap_reports:/zap/wrk:rw"
       register: zap

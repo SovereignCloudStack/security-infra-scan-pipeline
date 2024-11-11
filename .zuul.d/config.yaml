@@ -3,16 +3,41 @@
     name: SovereignCloudStack/security-infra-scan-pipeline
     default-branch: main
     merge-mode: "squash-merge"
+    vars:
+      scan_targets:
+        #- capi-jsgen.moin.k8s.scs.community
+        #- cluster-gen.moin.k8s.scs.community
+        #- dex.scs.community
+        #- maschinenraum.scs.community
+        #- moin.k8s.scs.community
+        - monitoring.scs.community
+        #- registry.scs.community
+        #- status-api.k8s.scs.community
+        #- status-idp.k8s.scs.community
+        #- status.k8s.scs.community
+        #- viz.moin.k8s.scs.community
+        - zuul.sovereignit.cloud
+        - api.gx-scs.sovereignit.cloud
+        - compliance.sovereignit.cloud
+        #- health.gx-scs.sovereignit.cloud
+        #- iam.gx-scs.sovereignit.cloud
+        - ui.gx-scs.sovereignit.cloud
+
     check:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - scs-baseline-security-scan-test: &trig
+            files:
+              - ^files/.*
+              - ^playbooks/.*
+              - ^.zuul.d/.*
+        - scs-full-security-scan-test: *trig
+        - scs-greenbone-security-scan-test: *trig
     gate:
       jobs:
-        - scs-baseline-security-scan-test
-        - scs-full-security-scan-test
-        - scs-greenbone-security-scan-test
+        - noop
+        - scs-baseline-security-scan-test: *trig
+        - scs-full-security-scan-test: *trig
+        - scs-greenbone-security-scan-test: *trig
     periodic-daily:
       jobs:
         - scs-baseline-security-scan
@@ -26,21 +51,16 @@
     parent: base
     description: |
       Base for any security scanning job
-    timeout: 3600 #1h
+    # NOTE(90n20): Default timeout of all jobs has been increased to 3hs due to the amount of targets being defined.
+    timeout: 10800 #3hs
     pre-run: playbooks/pre.yaml
     post-run: playbooks/post.yaml
+    nodeset: ubuntu-jammy-large
     vars:
       # Where to store intermediate data
       scan_work_dir: "{{ ansible_user_dir }}/wrk"
       # Where to flush (and read) results from
       scan_results_dir: "{{ ansible_user_dir }}/wrk/scan_results"
-      # Default list of scan targets.
-      # NOTE(gtema): It would be nice in tests to use test instance itself, but
-      # it only exposes SSH port what makes scanning very fast and reports
-      # empty. We potentially want to see how the reports are looking like also 
-      # in tests.
-      scan_targets:
-        - 213.131.230.161
 
 - job:
     name: scs-baseline-security-scan-base
@@ -76,6 +96,10 @@
       Since this is an untrusted job it does not have access to the secrets
       and thus not posting results to the DefectDojo.
     vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud
+
       pipeline_conf:
         dojo_url: https://demo.defectdojo.com/api/v2/import-scan/
         daily_scan_engagement_id: 1
@@ -89,6 +113,10 @@
       Base for the security scan involving naabu/nuclei/httpx/OWASP Zap.
 
       OWASP Zap test is performed in the full configuration
+    # NOTE(90n20): zap-full-scan.py includes both ZAP spider and ajax spider 
+    # and then performs a full active scan, this is, launch attacks on the 
+    # targets. This runs for a long period of time, so the timeout has to be adjusted. 
+    timeout: 21600 #6h
     run: playbooks/daily-scan.yaml
     vars:
       zap_script: "zap-full-scan.py"
@@ -101,6 +129,10 @@
 
       Since this is an untrusted job it does not have access to the secrets
       and thus not posting results to the DefectDojo.
+    vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud
 
 - job:
     name: scs-full-security-scan
@@ -117,9 +149,9 @@
 - job:
     name: scs-greenbone-security-scan-base
     parent: scs-security-scan-base
-    nodeset: ubuntu-jammy-large
     description: |
       Perform baseline scan of the resources
+    nodeset: ubuntu-jammy-large
     timeout: 21600 #6h
     run: playbooks/greenbone.yaml
 
@@ -138,3 +170,7 @@
 - job:
     name: scs-greenbone-security-scan-test
     parent: scs-greenbone-security-scan-base
+    vars:
+      # Scan only small subset of targets in the job self-test
+      scan_targets:
+        - zuul.sovereignit.cloud
