@@ -81,6 +81,7 @@
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
+       pass-to-parent: true
     vars:
       # TODO: engagement_id is not a secret, define id here directly
       # Since in Zuul it is not possible to define vars from secrets on the
@@ -140,6 +141,7 @@
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
+       pass-to-parent: true
     vars:
       # TODO: engagement_id is not a secret, define id here directly
       # Since in Zuul it is not possible to define vars from secrets on the
@@ -161,6 +163,7 @@
     secrets:
      - name: pipeline_conf
        secret: SECRET_SECURITY_INFRA_SCAN_PIPELINE
+       pass-to-parent: true
     vars:
       # TODO: engagement_id is not a secret, define id here directly
       # Since in Zuul it is not possible to define vars from secrets on the
