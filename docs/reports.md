@@ -1,6 +1,6 @@
 # Using Automated Pentesting Reports for CSPs, Operators, and Users
 
-This section outlines how Cloud Service Providers (CSPs), operators, and users can leverage automated pentesting reports focused on Infrastructure-as-a-Service (IaaS) and Container-as-a-Service (CaaS) environments. 
+This section outlines how Infrastructure Operators (Cloud Service Providers - CSPs) and users can leverage automated pentesting reports focused on Infrastructure-as-a-Service (IaaS) and Container-as-a-Service (CaaS) environments. 
 It explains the importance of daily and weekly reports for identifying and mitigating vulnerabilities, configuration issues, and security gaps in cloud infrastructure. Additionally, this documentation describes actionable
 processes for vulnerability management, tailored for both environments, and provides insights for operations with and without a Security Operations Center (SOC).
 
@@ -35,16 +35,16 @@ Weekly reports give a broader view of security health, highlighting trends and r
 - **Compliance Assurance**: Continuous monitoring and scanning ensure compliance with security standards such as GDPR, HIPAA, and CIS benchmarks.
 - **Detailed Analysis**: Reports encompass vulnerabilities at different layers—network, applications, and containers—identifying open ports, unpatched software, and web app flaws.
 
-## Role and Responsibilities of CSPs, Operators, and Users
+## Role and Responsibilities of Operators and Users
 
-### For CSPs
-CSPs have a responsibility to ensure the security of the IaaS and CaaS layers they manage to protect their services and customer data. Key responsibilities include:
+### For Operators (high-level view):
+Operators (CSPs) have a responsibility to ensure the security of the IaaS and CaaS layers they manage to protect their services and customer data. Key responsibilities include:
 
 - **Daily Monitoring**: Use tools like Naabu and Httpx for open port discovery and service monitoring. Remediate any critical issues immediately, especially for public-facing services.
 - **Configuration Audits**: Regularly assess cloud resource configurations using Nuclei and other compliance-focused tools to ensure adherence to security policies.
 - **Container Vulnerability Management**: Ensure that containerized environments are properly isolated, updated, and hardened against known vulnerabilities.
 
-### For Operators:
+### For Operator's staff:
 Operators are responsible for managing the security of cloud infrastructure, taking action based on the findings in the pentesting reports. Responsibilities include:
 
 - **Triage and Response**: Review daily reports to prioritize high-risk vulnerabilities such as misconfigurations or container escape risks. Act immediately to close exposed ports or restrict access where needed.
@@ -83,7 +83,7 @@ By following these steps daily, teams can ensure they stay on top of vulnerabili
 
 A SOC (Security Operations Center) is crucial for larger organizations to centralize threat detection, vulnerability management, and incident response. 
 It allows for rapid response to vulnerabilities identified in pentesting reports, providing 24/7 monitoring and remediation capabilities.
-However it is also possible to smaller teams to keep advantage of this reports.
+However it is also possible for smaller teams (without a dedicated SOC) to take advantage of these reports.
 
 ### With a SOC
 - **Daily Triage and Monitoring**: SOC teams use pentesting reports to triage vulnerabilities, prioritizing critical risks such as exposed ports, misconfigurations, and unpatched containers.
