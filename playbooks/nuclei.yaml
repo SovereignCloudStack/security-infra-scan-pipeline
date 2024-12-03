@@ -15,7 +15,7 @@
         state: "started"
         detach: false
       register: nuclei_container_result
-    
+
     #Small task to list generated nuclei json report.
     - name: Find Nuclei report
       ansible.builtin.find:
@@ -34,7 +34,7 @@
     #Iterate over stored report content, decode it from base64 and send it to a defectdojo instance. 
     #Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Nuclei results to Defect Dojo
-      no_log: true
+      #no_log: true
       ansible.builtin.uri:
         url: "{{ pipeline_conf.dojo_url }}"
         headers:
