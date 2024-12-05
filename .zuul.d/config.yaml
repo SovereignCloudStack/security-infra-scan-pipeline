@@ -102,7 +102,7 @@
         - zuul.sovereignit.cloud
 
       pipeline_conf:
-        dojo_url: https://demo.defectdojo.com/api/v2/import-scan/
+        dojo_url: https://demo.defectdojo.com
         daily_scan_engagement_id: 1
         weekly_scan_engagement_id: 1
         dojo_auth: "Basic YWRtaW46MURlZmVjdGRvam9AZGVtbyNhcHBzZWM="

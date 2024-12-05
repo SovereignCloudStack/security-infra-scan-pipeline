@@ -36,7 +36,7 @@
     - name: Send Nuclei results to Defect Dojo
       #no_log: true
       ansible.builtin.uri:
-        url: "{{ pipeline_conf.dojo_url }}"
+        url: "{{ pipeline_conf.dojo_url }}/api/v2/import-scan"
         headers:
           Authorization: "{{ ('Token ' + pipeline_conf.dojo_api_key) if pipeline_conf.dojo_api_key is defined else pipeline_conf.dojo_auth }}"
         method: "POST"
