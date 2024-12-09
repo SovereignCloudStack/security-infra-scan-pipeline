@@ -32,23 +32,24 @@
       when:
         - "zj_item != ''"
 
-    #Small task to list generated zap xml reports.
+    # Small task to list generated zap xml reports.
     - name: Find Zap reports
       ansible.builtin.find:
         paths: "{{ scan_results_dir }}/zap_reports"
         patterns: "*.xml"
       register: "zap_reports"
 
-    #Small task to read previous listed xml reports content.
-    #Content is stored as base64 in a variable
+    # Small task to read previous listed xml reports content.
+    # Content is stored as base64 in a variable
     - name: Read in ZAP reports content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ zap_reports.files }}"
       register: "zap_reports_content"
 
-    #Iterate over stored reports content, decode them from base64 and send it to a defectdojo instance. 
-    #Specific defecdojo variables are defined in zuul config file and secrets.
+    # Iterate over stored reports content, decode them from base64 and send it
+    # to a defectdojo instance. Specific defecdojo variables are defined in 
+    # zuul config file and secrets.
     - name: Send Zap results to Defect Dojo
       #  no_log: true
       ansible.builtin.uri:
@@ -64,8 +65,10 @@
           active: "true"
           skip_duplicates: "false"
           close_old_findings: "true"
-          file: 
-            content: "{{ zj_item['content'] | b64decode }}"
+          file:
+            filename: "{{ zj_item['source'] | basename }}"
+            content: "{{ zj_item['content'] | b64decode | urlencode  }}"
+        status_code: [200, 201]
       loop: "{{ zap_reports_content.results }}"
       loop_control:
         loop_var: zj_item

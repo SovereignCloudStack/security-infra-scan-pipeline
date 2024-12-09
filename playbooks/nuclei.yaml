@@ -16,23 +16,23 @@
         detach: false
       register: nuclei_container_result
 
-    #Small task to list generated nuclei json report.
+    # Small task to list generated nuclei json report.
     - name: Find Nuclei report
       ansible.builtin.find:
         paths: "{{ scan_results_dir }}"
         patterns: "nuclei-results.json"
       register: "nuclei_reports"
 
-    #Small task to read previous listed json report content.
-    #Content is stored as base64 in a variable
+    # Small task to read previous listed json report content.
+    # Content is stored as base64 in a variable
     - name: Read in Nuclei report content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ nuclei_reports.files }}"
       register: "nuclei_reports_content"
 
-    #Iterate over stored report content, decode it from base64 and send it to a defectdojo instance. 
-    #Specific defecdojo variables are defined in zuul config file and secrets.
+    # Iterate over stored report content, decode it from base64 and send it to a defectdojo instance.
+    # Specific defecdojo variables are defined in zuul config file and secrets.
     - name: Send Nuclei results to Defect Dojo
       #no_log: true
       ansible.builtin.uri:
@@ -48,7 +48,10 @@
           active: "true"
           skip_duplicates: "false"
           close_old_findings: "true"
-          file: "{{ zj_item['content'] | b64decode }}"
+          file:
+            filename: "{{ zj_item['source'] | basename }}"
+            content: "{{ zj_item['content'] | b64decode | urlencode  }}"
+        status_code: [200, 201]
       loop: "{{ nuclei_reports_content.results }}"
       loop_control:
         loop_var: zj_item
