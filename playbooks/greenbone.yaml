@@ -42,16 +42,17 @@
         patterns: "*.xml"
       register: "gvm_reports"
 
-    #Small task to read previous listed xml reports content.
-    #Content is stored as base64 in a variable
+    # Small task to read previous listed xml reports content.
+    # Content is stored as base64 in a variable
     - name: Read in Greenbone reports content
       ansible.builtin.slurp:
         src: "{{ item.path }}"
       loop: "{{ gvm_reports.files }}"
       register: "gvm_reports_content"
 
-    #Iterate over stored reports content, decode them from base64 and send it to a defectdojo instance. 
-    #Specific defecdojo variables are defined in zuul config file and secrets.
+    # Iterate over stored reports content, decode them from base64 and send it
+    # to a defectdojo instance. Specific defecdojo variables are defined in
+    # zuul config file and secrets.
     - name: Send Greenbone results to Defect Dojo
       no_log: true
       ansible.builtin.uri:
@@ -67,7 +68,10 @@
           active: "true"
           skip_duplicates: "false"
           close_old_findings: "true"
-          file: "{{ zj_item['content'] | b64decode }}"
+          file: 
+            filename: "{{ zj_item['source'] | basename }}"
+            content: "{{ zj_item['content'] | b64decode | urlencode  }}"
+        status_code: [200, 201]
       loop: "{{ gvm_reports_content.results }}"
       loop_control:
         loop_var: zj_item
