@@ -67,7 +67,7 @@
           close_old_findings: "true"
           file:
             filename: "{{ zj_item['source'] | basename }}"
-            content: "{{ zj_item['content'] | b64decode | urlencode  }}"
+            content: "{{ zj_item['content'] | b64decode }}"
         status_code: [200, 201]
       loop: "{{ zap_reports_content.results }}"
       loop_control:
