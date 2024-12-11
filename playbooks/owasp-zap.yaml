@@ -51,7 +51,7 @@
     # to a defectdojo instance. Specific defecdojo variables are defined in 
     # zuul config file and secrets.
     - name: Send Zap results to Defect Dojo
-      #  no_log: true
+      no_log: true
       ansible.builtin.uri:
         url: "{{ pipeline_conf.dojo_url }}/api/v2/import-scan/"
         headers:
